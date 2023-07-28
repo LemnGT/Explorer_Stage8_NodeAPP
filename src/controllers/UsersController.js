@@ -20,7 +20,12 @@ class UsersController {
 
     const hashedPassword = await hash(password, 8);
 
-    response.status(201).json({ name, email, password, icon });
+    await database.run(
+      "INSERT INTO users (name, email, password, avatar) VALUES(?, ?, ?, ?)",
+      [name, email, hashedPassword, avatar]
+    );
+
+    response.status(201).json({ name, email, password, avatar });
   }
 
   async update(request, response) {
@@ -35,17 +40,18 @@ class UsersController {
       throw new AppError("Usuário não encontrado");
     }
 
-    const userWithUpdatedEmail = database.get(
+    const userWithUpdatedEmail = await database.get(
       "SELECT * FROM users WHERE email = (?)",
       [email]
     );
 
     if (userWithUpdatedEmail && userWithUpdatedEmail.id !== user.id) {
-      throw new AppError("Email já está em uso");
+      throw new AppError("Este e-mail já está em uso");
     }
 
     user.name = name ?? user.name;
     user.email = email ?? user.email;
+    user.avatar = avatar ?? user.avatar;
 
     if (password && !old_password) {
       throw new AppError("Necessário informar senha antiga");
@@ -60,6 +66,17 @@ class UsersController {
 
       user.password = await hash(password, 8);
     }
+    await database.run(
+      `
+    UPDATE users SET
+    name = ?,
+    email = ?,
+    password = ?,
+    avatar = ?,
+    updated_at = DATETIME('now')
+    WHERE id = ?`,
+      [user.name, user.email, user.password, user.avatar, id]
+    );
 
     return response.status(200).json();
   }
