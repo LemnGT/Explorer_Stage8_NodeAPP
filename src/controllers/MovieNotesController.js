@@ -9,6 +9,9 @@ class MovieNotesController {
     if (rating > 5) {
       throw new AppError("A maior nota possível é 5");
     }
+    if (rating < 0) {
+      throw new AppError("A menor nota possível é 0");
+    }
 
     const [note_id] = await knex("movie_notes").insert({
       title,
